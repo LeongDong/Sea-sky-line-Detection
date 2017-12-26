@@ -1,0 +1,79 @@
+img = imread('F:\1-sea-sky-pic\ed.jpg');
+a = double(img(:,:,3));
+SE = strel ( 'square',3);
+a = imerode( a, SE);
+a = imdilate( a, SE);
+
+[m,n]=size(a);
+N=m*n;
+L=256;
+slope = 0;
+intercept = 0;
+theta = 0;
+grad = 0;
+fitnum = 5;
+gradmax = zeros(1,n);
+xcom = zeros(1,n);
+ycom = zeros(1,n);
+x = zeros(1,fitnum);
+y = zeros(1,fitnum);
+num = zeros(1,fitnum * fitnum );
+line_theta = zeros(1,fitnum * fitnum );
+line_b = zeros(1,fitnum * fitnum);
+
+for j = 1 : n
+    gradmax(j) = 0;
+    for i = 1 : m - 1
+        grad = (a(i,j) + 1) / (a(i + 1,j) + 1);
+        if(gradmax(j) < grad)
+            gradmax(j) = grad;
+            xcom(j) = j;
+            ycom(j) = i;
+        end
+    end
+end
+
+for i = 1:fitnum
+     [~,minloc] = min(gradmax);
+     x(i) = xcom(minloc);
+     y(i) = ycom(minloc);
+     gradmax(minloc) = 100;
+end
+
+figure,
+imshow(img);
+hold on;
+
+th = 0;
+flag = -1;
+for i = 1 : fitnum - 1
+    for j = (i + 1) : fitnum
+        slope = (y(j) - y(i)) / (x(j) - x(i));
+        intercept = (x(j) * y(i) - y(j) * x(i)) / (x(j) - x(i));
+        theta = atand(slope);
+        for k = 1 : th
+            flag = -1;
+            if(abs(line_theta(k) - theta) <= 2 && abs(line_b(k) - intercept) <= 2)
+                line_theta(k) = (line_theta(k) * num(k) + theta) / (num(k) + 1);
+                line_b(k) = (line_b(k) * num(k) + intercept) / (num(k) + 1);
+                num(k) = num(k) + 1;
+                flag = 1;
+            end
+        end
+        if(flag == -1)
+            th = th + 1;
+            line_theta(th) = theta;
+            line_b(th) = intercept;
+        end
+    end
+end
+
+[max_val,max_num] = max(num);
+theta_f = line_theta(max_num);
+intercept_f = line_b(max_num);
+
+x_plot = 1:1:n;
+y_plot = tand(theta_f) * x_plot + intercept_f;
+plot(x_plot,y_plot,'Color',[0 0 0]);
+
+hold off;
